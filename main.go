@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strings"
@@ -10,38 +9,51 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/bwmarrin/discordgo"
 )
 
-var instanceID = "i-082e36c19270991b8"
-
 func main() {
-	reader := bufio.NewReader(os.Stdin)
+	Token := os.Getenv("DISCORD_BOT_TOKEN")
+	dg, err := discordgo.New("Bot " + Token)
+	if err != nil {
+		fmt.Println("Error creating Discord session,", err)
+		return
+	}
 
-	for {
-		fmt.Print("Enter command (start/stop/exit): ")
-		input, _ := reader.ReadString('\n')
-		input = strings.TrimSpace(input)
+	dg.AddHandler(messageCreate)
 
-		switch input {
-		case "start":
-			err := startInstance(instanceID)
-			if err != nil {
-				fmt.Println("Failed to start instance:", err)
-			} else {
-				fmt.Println("Instance started.")
-			}
-		case "stop":
-			err := stopInstance(instanceID)
-			if err != nil {
-				fmt.Println("Failed to stop instance:", err)
-			} else {
-				fmt.Println("Instance stopped.")
-			}
-		case "exit":
-			fmt.Println("Exiting...")
-			return
-		default:
-			fmt.Println("Unknown command. Please use 'start', 'stop', or 'exit'.")
+	err = dg.Open()
+	if err != nil {
+		fmt.Println("Error opening connection,", err)
+		return
+	}
+
+	fmt.Println("Bot is now running. Press CTRL+C to exit.")
+	select {}
+}
+
+func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.Author.ID == s.State.User.ID {
+		return
+	}
+
+	instanceID := os.Getenv("AWS_INSTANCE_ID")
+
+	if strings.HasPrefix(m.Content, "!start") {
+		err := startInstance(instanceID)
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, "Failed to start instance: "+err.Error())
+		} else {
+			s.ChannelMessageSend(m.ChannelID, "Instance started.")
+		}
+	}
+
+	if strings.HasPrefix(m.Content, "!stop") {
+		err := stopInstance(instanceID)
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, "Failed to stop instance: "+err.Error())
+		} else {
+			s.ChannelMessageSend(m.ChannelID, "Instance stopped.")
 		}
 	}
 }
