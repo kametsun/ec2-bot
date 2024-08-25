@@ -62,10 +62,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func startInstance(instanceID string) error {
-	sess, err := session.NewSession(&aws.Config{
-		Region:      aws.String(os.Getenv("AWS_REGION")),
-		Credentials: credentials.NewEnvCredentials(),
-	})
+	awsAccessKeyID := os.Getenv("AWS_ACCESS_KEY_ID")
+    awsSecretAccessKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+    awsRegion := os.Getenv("AWS_REGION")
+
+    if awsAccessKeyID == "" || awsSecretAccessKey == "" || awsRegion == "" {
+        return fmt.Errorf("AWS credentials or region not set in environment variables")
+    }
+
+    sess, err := session.NewSession(&aws.Config{
+        Region:      aws.String(awsRegion),
+        Credentials: credentials.NewStaticCredentials(awsAccessKeyID, awsSecretAccessKey, ""),
+    })
 	if err != nil {
 		return err
 	}
