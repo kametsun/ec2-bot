@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -13,6 +14,8 @@ import (
 )
 
 func main() {
+	go startHealthCheckServer()
+
 	Token := os.Getenv("DISCORD_BOT_TOKEN")
 	dg, err := discordgo.New("Bot " + Token)
 	if err != nil {
@@ -98,4 +101,17 @@ func stopInstance(instanceID string) error {
 
 	fmt.Printf("Instance %s stopped\n", instanceID)
 	return nil
+}
+
+func startHealthCheckServer() {
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
+	port := ":8080"
+	fmt.Println("Health check server is running on port", port)
+	if err := http.ListenAndServe(port, nil); err != nil {
+		fmt.Println("Error starting health check server:", err)
+	}
 }
